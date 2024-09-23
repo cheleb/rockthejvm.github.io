@@ -128,7 +128,7 @@ ScalaJS and ScalaJS bundler are smart enough to crosscompile and deploy `module/
 
 ### 4.3. JS world
 
-JS integration is also a classical one with NPM and Vite fellow, here a again specific configuration is limited to vite.config.js
+JS integration is also a classical one with NPM and Vite fellows, here a again specific configuration is limited to vite.config.js
 
 ```javascript
 import { defineConfig } from "vite";
@@ -251,10 +251,10 @@ Very important, ZIO is a combination of monads, and as such it provides a lot of
 A ZIO aka program, workflow, or effect:
 
 1. can be combined with other effects at will
-2. when resources and dependencies are provided to the effect, and the effect can be run
+2. when requirements are provided to the effect, it can be run
 3. and the result can be consumed by downstream effects
 4. error are be handled
-5. resources can be released
+5. resources were acquired they will be released
 
 
 In a glance ZIO[–R,+E,+A] smart variance annotations allow a very convenient constructions like our Server side application:
@@ -289,8 +289,8 @@ object HttpServer extends ZIOAppDefault {
 ```
 
 * Two ZIO effects:
-  * **(1)** `runMigrations` is a ZIO[**FlywayService**, …] that depends on a FlywayService, and that will handle the database migrations.
-  * **(2)** `server` is a ZIO[**PersonService & Server**, …] that depends on a PersonService and a Server and that will handle the HTTP server.
+  * **(1)** `runMigrations` is a ZIO that depends on a **FlywayService**, and that will handle the database migrations.
+  * **(2)** `server` is a ZIO that depends on a **PersonService and Server** that will handle the HTTP server.
 * Those two effects combine in a for comprehension **(3)** to produce a new ZIO **(4)** that accumulate the dependencies:
 
  ZIO[**FlywayService & PersonService & Server**, …]
@@ -307,7 +307,7 @@ Let see how ZIO, Layer per layer assembles the application.
 
 Repository, the layer that abstract the database access, is the first layer of the application.
 
-In this project, classic Repository object connects the database through classical JDBC DataSource.
+In this project, classic Repository object connects the database through JDBC DataSource.
 
 
 ```scala
@@ -527,7 +527,7 @@ This is a ZIO effect that will:
 >
 > Hence, **metricsEndpoint :: webJarRoutes :: endpoints ::: docEndpoints** is a list of endpoints.
 
-This endpoints are a combination of the metrics endpoint, the webjar routes, the API endpoints and the documentation endpoints.
+These endpoints are a combination of the metrics endpoint, the webjar routes, the API endpoints and the documentation endpoints.
 
 
 ```scala
@@ -566,37 +566,31 @@ This is a huge win, because it allows to:
 * generate the documentation
 * test the controller in an isolated way
 
-Here is an example of Tapir endpoints definition:
-
 ### 6.1. Shared Endpoint definitions
 
-In the shared module, the API endpoints are defined as immutable data structures.
+In the shared module, the API endpoints are defined:
 
 ```scala
 object PersonEndpoints {
-  val get Endpoint[Unit, String, Person, Any] = endpoint.get
-    .in("person")
-    .out(jsonBody[Person])
-    .errorOut(stringBody)
-    .summary("Get a person by id")
 
-  val create: Endpoint[Unit, Person, Throwable, User, Any] = baseEndpoint
+  val create: PublicEndpoint[Person, Throwable, User, Any] = baseEndpoint
     .tag("person")
     .name("person")
     .post
     .in("person")
-    .in(
-      jsonBody[Person]
-        .description("Person to create")
-        .example(Person("John", 30, Left(Cat("Fluffy"))))
-    )
+    .in(jsonBody[Person])
     .out(jsonBody[User])
-    .description("Create person")
 
+  val profile: Endpoint[String, Unit, Throwable, User, Any] = baseSecuredEndpoint
+    .tag("person")
+    .name("profile")
+    .get
+    .in("profile")
+    .out(jsonBody[User])
 }
 ```
 
-This is a simple GET endpoint that will return a Person and a POST endpoint that will create a Person and return a User.
+This is a public POST endpoint that will create a Person and return a User, and a secured GET endpoint that will return the User profile.
 
 From this definition, Tapir will help to generate the client and server side code, the documentation and the tests.
 
